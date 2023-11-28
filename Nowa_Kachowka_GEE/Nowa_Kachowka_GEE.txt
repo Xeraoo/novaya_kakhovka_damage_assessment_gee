@@ -1,0 +1,196 @@
+//Obszar roboczy
+
+var geometry = 
+    /* color: #d63000 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[32.12457614745724, 46.98680414807575],
+          [32.12457614745724, 46.40282280396601],
+          [33.80823093261349, 46.40282280396601],
+          [33.80823093261349, 46.98680414807575]]], null, false);
+
+//KOD 1 
+//Obszar przed zniszczeniem tamy
+// Adding the Boundaries_GZM asset extracted with QGIS from the counties of Poland to the work.
+var GZMBoundaries = geometry;
+
+// Determining the year for analysis
+var analysisYear = 2022;
+var startDate = ee.Date.fromYMD(analysisYear, 5, 1);
+var endDate = ee.Date.fromYMD(analysisYear, 10, 6);
+
+// Download LANDSAT/LC08/C01/T1_TOA data
+var landsatCollection = ee.ImageCollection("LANDSAT/LC09/C02/T1_TOA")
+  .filterBounds(geometry)
+  .filterDate(startDate, endDate)
+  .sort("CLOUD_COVER", true)
+  .limit(20);
+
+// Select the median image from the collection
+var medianImage = landsatCollection.median();
+
+// Trim LANDSAT images to the area of Krakow
+var landsatImage = medianImage.clip(GZMBoundaries);
+
+// Create an RGB image using red, green, and blue bands
+var rgbImage = landsatImage.select(['B4', 'B3', 'B2']);
+
+// Mask pixels likely to contain clouds or cloud shadows
+var cloudMask = landsatImage.eq(61440)
+  .reduce(ee.Reducer.anyNonZero());
+var mask = cloudMask.not();
+var rgbMasked = rgbImage.updateMask(mask);
+
+// Apply brightness and contrast adjustments to the RGB image
+var brightnessFactor = 1;
+var contrastFactor = 1;
+var rgbAdjusted = rgbMasked.multiply(brightnessFactor).multiply(contrastFactor);
+
+
+// Sharpening
+var hsv = rgbAdjusted.select(['B4', 'B3', 'B2']).rgbToHsv();
+var sharpened = ee.Image.cat([hsv.select('hue'), hsv.select('saturation'), landsatImage.select('B8')]).hsvToRgb();
+Map.addLayer(sharpened, { min: 0, max: 0.25, gamma: [1.3, 1.3, 1.3] }, 'Sharpened Image 1');
+
+// Add spectral channels
+var allBands = landsatImage.bandNames();
+var presentBands = sharpened.bandNames();
+var missingBands = allBands.removeAll(presentBands);
+var missingBandsImage = landsatImage.select(missingBands);
+
+// Add the missing bands image to the existing sharpened image with spectral channels
+sharpened = sharpened.addBands(missingBandsImage);
+
+var fccImage = landsatImage.select(['B5', 'B4', 'B3']); 
+
+// Ustaw opacity na 0.25 i gammę na 0.5
+var visualization = {min: 0, max: 0.3, opacity: 0.25, gamma: 0.5};
+
+// Dodaj obraz FCC do mapy
+Map.addLayer(fccImage, visualization, 'FCC Image 1');
+
+
+//Zdjęcie 2
+//Obszar po zniszczeniu tamy
+// Adding the Boundaries_GZM asset extracted with QGIS from the counties of Poland to the work.
+var GZMBoundaries = geometry;
+
+// Determining the year for analysis
+var analysisYear = 2023;
+var startDate = ee.Date.fromYMD(analysisYear, 6, 7);
+var endDate = ee.Date.fromYMD(analysisYear, 6, 14);
+
+// Download LANDSAT/LC08/C01/T1_TOA data
+var landsatCollection = ee.ImageCollection("LANDSAT/LC09/C02/T1_TOA")
+  .filterBounds(geometry)
+  .filterDate(startDate, endDate)
+  .sort("CLOUD_COVER", true)
+  .limit(20);
+
+// Select the median image from the collection
+var medianImage = landsatCollection.median();
+
+// Trim LANDSAT images to the area of Krakow
+var landsatImage = medianImage.clip(GZMBoundaries);
+
+// Create an RGB image using red, green, and blue bands
+var rgbImage = landsatImage.select(['B4', 'B3', 'B2']);
+
+// Mask pixels likely to contain clouds or cloud shadows
+var cloudMask = landsatImage.eq(61440)
+  .reduce(ee.Reducer.anyNonZero());
+var mask = cloudMask.not();
+var rgbMasked = rgbImage.updateMask(mask);
+
+// Apply brightness and contrast adjustments to the RGB image
+var brightnessFactor = 1;
+var contrastFactor = 1;
+var rgbAdjusted = rgbMasked.multiply(brightnessFactor).multiply(contrastFactor);
+
+// Sharpening
+var hsv = rgbAdjusted.select(['B4', 'B3', 'B2']).rgbToHsv();
+var sharpened = ee.Image.cat([hsv.select('hue'), hsv.select('saturation'), landsatImage.select('B8')]).hsvToRgb();
+Map.addLayer(sharpened, { min: 0, max: 0.25, gamma: [1.3, 1.3, 1.3] }, 'Sharpened Image 2');
+
+// Add spectral channels
+var allBands = landsatImage.bandNames();
+var presentBands = sharpened.bandNames();
+var missingBands = allBands.removeAll(presentBands);
+var missingBandsImage = landsatImage.select(missingBands);
+
+// Add the missing bands image to the existing sharpened image with spectral channels
+sharpened = sharpened.addBands(missingBandsImage);
+
+
+var fccImage = landsatImage.select(['B5', 'B4', 'B3']); 
+
+// Ustaw opacity na 0.25 i gammę na 0.5
+var visualization = {min: 0, max: 0.3, opacity: 0.25, gamma: 0.5};
+
+// Dodaj obraz FCC do mapy
+Map.addLayer(fccImage, visualization, 'FCC Image 2');
+
+//Zdjęcie 3
+//Obszar po wyschnięciu fali powodziowej
+
+// Adding the Boundaries_GZM asset extracted with QGIS from the counties of Poland to the work.
+var GZMBoundaries = geometry;
+
+// Determining the year for analysis
+var analysisYear = 2023;
+var startDate = ee.Date.fromYMD(analysisYear, 7, 7);
+var endDate = ee.Date.fromYMD(analysisYear, 10, 31);
+
+// Download LANDSAT/LC08/C01/T1_TOA data
+var landsatCollection = ee.ImageCollection("LANDSAT/LC09/C02/T1_TOA")
+  .filterBounds(geometry)
+  .filterDate(startDate, endDate)
+  .sort("CLOUD_COVER", true)
+  .limit(20);
+
+// Select the median image from the collection
+var medianImage = landsatCollection.median();
+
+// Trim LANDSAT images to the area of Krakow
+var landsatImage = medianImage.clip(GZMBoundaries);
+
+// Create an RGB image using red, green, and blue bands
+var rgbImage = landsatImage.select(['B4', 'B3', 'B2']);
+
+// Mask pixels likely to contain clouds or cloud shadows
+var cloudMask = landsatImage.eq(61440)
+  .reduce(ee.Reducer.anyNonZero());
+var mask = cloudMask.not();
+var rgbMasked = rgbImage.updateMask(mask);
+
+// Apply brightness and contrast adjustments to the RGB image
+var brightnessFactor = 1;
+var contrastFactor = 1;
+var rgbAdjusted = rgbMasked.multiply(brightnessFactor).multiply(contrastFactor);
+
+// Sharpening
+var hsv = rgbAdjusted.select(['B4', 'B3', 'B2']).rgbToHsv();
+var sharpened = ee.Image.cat([hsv.select('hue'), hsv.select('saturation'), landsatImage.select('B8')]).hsvToRgb();
+Map.addLayer(sharpened, { min: 0, max: 0.25, gamma: [1.3, 1.3, 1.3] }, 'Sharpened Image 3');
+
+// Add spectral channels
+var allBands = landsatImage.bandNames();
+var presentBands = sharpened.bandNames();
+var missingBands = allBands.removeAll(presentBands);
+var missingBandsImage = landsatImage.select(missingBands);
+
+// Add the missing bands image to the existing sharpened image with spectral channels
+sharpened = sharpened.addBands(missingBandsImage);
+
+
+var fccImage = landsatImage.select(['B5', 'B4', 'B3']); 
+
+// Ustaw opacity na 0.25 i gammę na 0.5
+var visualization = {min: 0, max: 0.3, opacity: 0.25, gamma: 0.5};
+
+// Dodaj obraz FCC do mapy
+Map.addLayer(fccImage, visualization, 'FCC Image 3');
